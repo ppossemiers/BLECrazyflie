@@ -14,6 +14,7 @@ crtp_characteristic = CBUUID.UUIDWithString_(u'00000202-1C7F-4F9E-947B-43B7C00A9
 
 def main():
 	cf = BLECrazyFlie()
+	# add methods that the crazyflie executes
 	cf.add_callback(hover)
 	cf.call(cf)
 	#manager = CBCentralManager.alloc()
@@ -22,16 +23,16 @@ def main():
 	AppHelper.runConsoleEventLoop(None, True, 'NSDefaultRunLoopMode')
 
 def hover(cf):
-	#print "Sending thrust 45000"
+	# sending thrust 45000
 	cf.commander.send_setpoint(0, 0, 0, 45000)
 	time.sleep(0.75)
 
-	#print "Stopping thrust, now hovering"
+	# stopping thrust, now hovering
 	#cf.param.set_value("flightmode.althold", "True")
 	#cf.commander.send_setpoint(0, 0, 0, 32767)
 	#while 1:
 	#	cf.commander.send_setpoint(0,0,0,32767)
-	#	time.sleep(0.05)
+	#	time.sleep(0.5)
 	
 class BLECrazyFlie():
     def __init__(self):
@@ -97,25 +98,22 @@ class BLECrazyFlie():
         self.call(self)
 
     def peripheral_didUpdateValueForCharacteristic_error_(self, peripheral, characteristic, error):
-        self.comms.send(characteristic.value().bytes().tobytes())
         print repr(characteristic.value().bytes().tobytes())
 
     def send_packet(self, pk, expected_reply=(), resend=False, timeout=0.2):
-		# 0xaa 0xaa 0x30 0x0e 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x3e
-		test_pk = "aaaa300e00000000000000000000000000003e"
-		test_pk2 = "0300000000000000008000000000c8af"
-		print len(test_pk)
-		print len(test_pk2)
-		#data = commander_packet(pk).get_bytes()
-		#print data.encode("hex")
+		#test_pk = 'aaaa300e00000000000000000000000000003e'
+		test_pk = 'aaaa300e00000000000000000000000000003e'
 		
-		#checksum = 0
-		#for ch in data:
-			#checksum += ord(ch)
-		
-		#bytes = NSData.dataWithBytes_length_(data, calcsize('<HfffH'))
-		#print bytes
-		#self.peripheral.writeValue_forCharacteristic_type_(data, self.crtp_characteristic, 'CBCharacteristicWriteWithResponse')
+		sum = 0
+		for ch in test_pk:
+			sum += ord(ch)
+			
+		mod = sum % 256
+		checksum = hex(mod)
+		print checksum
+				
+		bytes = bytearray.fromhex(test_pk)
+		self.peripheral.writeValue_forCharacteristic_type_(bytes, self.crtp_characteristic, 0)
 
     def shutdown(self):
         if self.peripheral is not None:
