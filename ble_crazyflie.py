@@ -14,17 +14,16 @@ def main():
    cf = BLECrazyFlie()
    # add methods that the crazyflie executes
    cf.add_callback(hover)
-   #cf.send_setpoint(0, 0, 0, 45000)
    manager = CBCentralManager.alloc()
    manager.initWithDelegate_queue_options_(cf, None, None)
    
    AppHelper.runConsoleEventLoop(None, True, 'NSDefaultRunLoopMode')
 
 def hover(cf):
-	# send thrust 45000
-	cf.send_setpoint(0, 0, 0, 0)
+	
+	# send thrust 15000
 	for i in range(10):
-		cf.send_setpoint(0, 0, 0, 45000)
+		cf.send_setpoint(0, 0, 0, 15000)
    		time.sleep(0.5)
 
    # stop thrust, start hover
@@ -47,11 +46,8 @@ class BLECrazyFlie():
    
 	def send_setpoint(self, roll, pitch, yaw, thrust):
 		data = struct.pack('<BfffH', 0x30, roll, -pitch, yaw, thrust)
-		#test_pk = '300000000000000000008000000000ea60'
-		print struct.unpack('<BfffH', data)
-		#bytes = bytearray.fromhex(test_pk)
+		#print struct.unpack('<BfffH', data)
 		bytes = NSData.dataWithBytes_length_(data, len(data))
-		print bytes
 		self.peripheral.writeValue_forCharacteristic_type_(bytes, self.crtp_characteristic, 1)
 
 	def add_callback(self, cb):
@@ -106,10 +102,12 @@ class BLECrazyFlie():
 		if error != None:
 			print repr(error)
   		else:
- 			print 'Sent!'
+ 			print 'Sent'
 
 	def peripheral_didUpdateNotificationStateForCharacteristic_error_(self, peripheral, characteristic, error):
 		print 'Receiving notifications'
+		# unlock thrust
+   		self.send_setpoint(0, 0, 0, 0)
 		self.call(self)
 
 	def peripheral_didUpdateValueForCharacteristic_error_(self, peripheral, characteristic, error):
