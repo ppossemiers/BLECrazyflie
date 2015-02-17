@@ -91,9 +91,10 @@ class BLECrazyFlie():
 		print repr(error)
 		AppHelper.stopEventLoop()
 
-	def peripheral_didDiscoverServices_(self, peripheral, services):
-		self.service = self.peripheral.services()[0]
-		self.peripheral.discoverCharacteristics_forService_([crtp_characteristic], self.service)
+	def peripheral_didDiscoverServices_(self, peripheral, error):
+		if(error == None):
+			self.service = self.peripheral.services()[0]
+			self.peripheral.discoverCharacteristics_forService_([crtp_characteristic], self.service)
    
 	def peripheral_didDiscoverCharacteristicsForService_error_(self, peripheral, service, error):
 		for characteristic in self.service.characteristics():
