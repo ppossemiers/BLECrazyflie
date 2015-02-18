@@ -20,10 +20,12 @@ def main():
    AppHelper.runConsoleEventLoop(None, True, 'NSDefaultRunLoopMode')
 
 def hover(cf):
-	
-	# send thrust 15000
+	thrust = 10000
+	increment = 1000
+	# send thrust
 	for i in range(10):
-		cf.send_setpoint(0, 0, 0, 15000)
+		cf.send_setpoint(0, 0, 0, thrust)
+		thrust += increment
    		time.sleep(0.5)
 
    # stop thrust, start hover
@@ -46,7 +48,6 @@ class BLECrazyFlie():
    
 	def send_setpoint(self, roll, pitch, yaw, thrust):
 		data = struct.pack('<BfffH', 0x30, roll, -pitch, yaw, thrust)
-		#print struct.unpack('<BfffH', data)
 		bytes = NSData.dataWithBytes_length_(data, len(data))
 		self.peripheral.writeValue_forCharacteristic_type_(bytes, self.crtp_characteristic, 1)
 
@@ -67,16 +68,17 @@ class BLECrazyFlie():
  			manager.scanForPeripheralsWithServices_options_(None, None)
 
 	def centralManager_didDiscoverPeripheral_advertisementData_RSSI_(self, manager, peripheral, data, rssi):
-		print peripheral.name()
+		print 'Found ' + peripheral.name()
 		if peripheral.name() == 'Crazyflie':
 			manager.stopScan()
  			self.peripheral = peripheral
- 			manager.connectPeripheral_options_(peripheral, None)
+ 			manager.connectPeripheral_options_(self.peripheral, None)
 
 	def centralManager_didConnectPeripheral_(self, manager, peripheral):
 		print 'Connected to ' + peripheral.name()
   		self.connected = True
   		self.peripheral.setDelegate_(self)
+  		self.peripheral.readRSSI()
   		self.peripheral.discoverServices_([crazyflie_service])
 
 	def centralManager_didFailToConnectPeripheral_error_(self, manager, peripheral, error):
@@ -84,7 +86,6 @@ class BLECrazyFlie():
 
 	def centralManager_didDisconnectPeripheral_error_(self, manager, peripheral, error):
 		self.connected = False
-		print repr(error)
 		AppHelper.stopEventLoop()
 
 	def peripheral_didDiscoverServices_(self, peripheral, error):
@@ -112,6 +113,9 @@ class BLECrazyFlie():
 
 	def peripheral_didUpdateValueForCharacteristic_error_(self, peripheral, characteristic, error):
 		print repr(characteristic.value().bytes().tobytes())
+
+	def peripheralDidUpdateRSSI_error_(self, peripheral, error):
+		print peripheral.RSSI()
 
 if __name__ == "__main__":
    main()
