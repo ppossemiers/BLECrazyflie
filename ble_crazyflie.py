@@ -11,23 +11,28 @@ crazyflie_service = CBUUID.UUIDWithString_(u'00000201-1C7F-4F9E-947B-43B7C00A9A0
 crtp_characteristic = CBUUID.UUIDWithString_(u'00000202-1C7F-4F9E-947B-43B7C00A9A08')
 
 def main():
-   cf = BLECrazyFlie()
-   # add methods that the crazyflie executes
-   cf.add_callback(hover)
-   manager = CBCentralManager.alloc()
-   manager.initWithDelegate_queue_options_(cf, None, None)
-   
-   AppHelper.runConsoleEventLoop(None, True, 'NSDefaultRunLoopMode')
+   	cf = BLECrazyFlie()
+   	# add methods that the crazyflie executes
+   	cf.add_callback(hover)
+   	manager = CBCentralManager.alloc()
+   	manager.initWithDelegate_queue_options_(cf, None, None)
+
+	try:
+		AppHelper.runConsoleEventLoop(installInterrupt=True)
+	except KeyboardInterrupt:
+		AppHelper.stopEventLoop()
 
 def hover(cf):
-	# send thrust
+	# take off
 	for i in range(10):
-		cf.send_setpoint(0, 0, 0, 30000)
+		cf.send_setpoint(0, 0, 0, 15000)
 		time.sleep(0.5)
 
 	# stop thrust, start hover
 	print 'Now hovering'
-	cf.set_param('flightmode.althold', '?', 'True')
+	# ident for flightmode.althold is 10
+	# https://github.com/bitcraze/crazyflie-clients-python/blob/master/lib/cflib/cache/E8BC7DAD.json
+	cf.set_param(10, '?', 'True')
 	cf.send_setpoint(0, 0, 0, 32767)
 	while 1:
 		cf.send_setpoint(0, 0, 0, 32767)
@@ -100,8 +105,6 @@ class BLECrazyFlie():
 	def peripheral_didWriteValueForCharacteristic_error_(self, peripheral, characteristic, error):
 		if error != None:
 			print repr(error)
-  		else:
- 			print 'Sent'
 
 	def peripheral_didUpdateNotificationStateForCharacteristic_error_(self, peripheral, characteristic, error):
 		print 'Receiving notifications'
@@ -110,15 +113,16 @@ class BLECrazyFlie():
 		self.call(self)
 
 	def peripheral_didUpdateValueForCharacteristic_error_(self, peripheral, characteristic, error):
+		print 'Updated value'
 		print repr(characteristic.value().bytes().tobytes())
 
-	def peripheralDidUpdateRSSI_error_(self, peripheral, error):
-		print peripheral.RSSI()
-
-	def set_param(self, complete_name, pytype, value):
-		#pk.set_header(0x02, WRITE_CHANNEL)
-		data = struct.pack('<Bs', 0x02, complete_name)
-		data += struct.pack(pytype, eval(value))
+	def set_param(self, ident, pytype, value):
+		#PARAM = 0x02
+		#WRITE_CHANNEL = 2
+		header = ((0x02 & 0x0f) << 4 | 3 << 2 |(0x02 & 0x03))
+		format = '<BB' + pytype
+		data = struct.pack(format, header, ident, eval(value))
+		print struct.unpack(format, data)
 		bytes = NSData.dataWithBytes_length_(data, len(data))
 		self.peripheral.writeValue_forCharacteristic_type_(bytes, self.crtp_characteristic, 1)
 
