@@ -20,20 +20,18 @@ def main():
    AppHelper.runConsoleEventLoop(None, True, 'NSDefaultRunLoopMode')
 
 def hover(cf):
-	thrust = 10000
-	increment = 1000
 	# send thrust
 	for i in range(10):
-		cf.send_setpoint(0, 0, 0, thrust)
-		thrust += increment
-   		time.sleep(0.5)
+		cf.send_setpoint(0, 0, 0, 30000)
+		time.sleep(0.5)
 
-   # stop thrust, start hover
-   #cf.set_param('flightmode.althold', 'True')
-   #cf.commander.send_setpoint(0, 0, 0, 32767)
-   #while 1:
-   #   cf.commander.send_setpoint(0,0,0,32767)
-   #   time.sleep(0.5)
+	# stop thrust, start hover
+	print 'Now hovering'
+	cf.set_param('flightmode.althold', '?', 'True')
+	cf.send_setpoint(0, 0, 0, 32767)
+	while 1:
+		cf.send_setpoint(0, 0, 0, 32767)
+		time.sleep(0.5)
 
 class BLECrazyFlie():
 	def __init__(self):
@@ -116,6 +114,13 @@ class BLECrazyFlie():
 
 	def peripheralDidUpdateRSSI_error_(self, peripheral, error):
 		print peripheral.RSSI()
+
+	def set_param(self, complete_name, pytype, value):
+		#pk.set_header(0x02, WRITE_CHANNEL)
+		data = struct.pack('<Bs', 0x02, complete_name)
+		data += struct.pack(pytype, eval(value))
+		bytes = NSData.dataWithBytes_length_(data, len(data))
+		self.peripheral.writeValue_forCharacteristic_type_(bytes, self.crtp_characteristic, 1)
 
 if __name__ == "__main__":
    main()
