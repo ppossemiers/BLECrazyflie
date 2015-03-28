@@ -11,6 +11,7 @@ crazyflie_service = CBUUID.UUIDWithString_(u'00000201-1C7F-4F9E-947B-43B7C00A9A0
 crtp_characteristic = CBUUID.UUIDWithString_(u'00000202-1C7F-4F9E-947B-43B7C00A9A08')
 
 def main():
+	# Ctrl + \ kills the script on MacOS
    	cf = BLECrazyFlie()
    	# add methods that the crazyflie executes
    	cf.add_callback(hover)
@@ -24,15 +25,12 @@ def main():
 
 def hover(cf):
 	# take off
-	for i in range(10):
-		cf.send_setpoint(0, 0, 0, 15000)
+	for i in range(2):
+		cf.send_setpoint(0, 0, 0, 50000)
 		time.sleep(0.5)
 
 	# stop thrust, start hover
-	print 'Now hovering'
-	# ident for flightmode.althold is 10
-	# https://github.com/bitcraze/crazyflie-clients-python/blob/master/lib/cflib/cache/E8BC7DAD.json
-	cf.set_param(10, '?', 'True')
+	cf.set_param(11, 'b', 1)
 	cf.send_setpoint(0, 0, 0, 32767)
 	while 1:
 		cf.send_setpoint(0, 0, 0, 32767)
@@ -117,15 +115,14 @@ class BLECrazyFlie():
 		print repr(characteristic.value().bytes().tobytes())
 
 	def set_param(self, ident, pytype, value):
-		#PARAM = 0x02
-		#WRITE_CHANNEL = 2
-		header = ((0x02 & 0x0f) << 4 | 3 << 2 |(0x02 & 0x03))
+		PARAM = 0x02
+		WRITE_CHANNEL = 2
+		header = ((0x02 & 0x0f) << 4 | 3 << 2 |(2 & 0x03))
 		format = '<BB' + pytype
-		data = struct.pack(format, header, ident, eval(value))
+		data = struct.pack(format, header, ident, value)
 		print struct.unpack(format, data)
 		bytes = NSData.dataWithBytes_length_(data, len(data))
 		self.peripheral.writeValue_forCharacteristic_type_(bytes, self.crtp_characteristic, 1)
 
 if __name__ == "__main__":
    main()
-
